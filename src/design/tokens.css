@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/plus-jakarta-sans';
+
+/* Tokens semánticos: claro por defecto, oscuro con clase .dark en <html> */
+:root {
+  --bg: #f5f3ee;
+  --surface: #ffffff;
+  --surface-2: #ece9e2;
+  --text: #101820;
+  --muted: #5c6770;
+  --accent: #1e9b6c;
+  --accent-deep: #d8f0e5;
+  --on-accent: #ffffff;
+  --danger: #d9483b;
+  --warning: #a8730f;
+  --border: rgb(16 24 32 / 0.08);
+  --shadow: 0 1px 2px rgb(16 24 32 / 0.04), 0 8px 24px -8px rgb(16 24 32 / 0.1);
+}
+:root.dark {
+  --bg: #101820;
+  --surface: #19252e;
+  --surface-2: #1f2d38;
+  --text: #f5f3ee;
+  --muted: #929da5;
+  --accent: #55d6a0;
+  --accent-deep: #244c3d;
+  --on-accent: #101820;
+  --danger: #ff786b;
+  --warning: #f2c66d;
+  --border: rgb(245 243 238 / 0.08);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.2), 0 8px 24px -8px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-line: var(--border);
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --radius-card: 1.5rem;
+  --shadow-card: var(--shadow);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  touch-action: manipulation; /* sin zoom por doble toque */
+  -webkit-text-size-adjust: 100%;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Insets de iOS */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Microinteracción de pulsación */
+.press { transition: transform 120ms ease, opacity 120ms ease; }
+.press:active { transform: scale(0.96); }
+
+/* Transición entre pantallas */
+.page-enter-active, .page-leave-active { transition: opacity 160ms ease, transform 160ms ease; }
+.page-enter-from { opacity: 0; transform: translateY(8px); }
+.page-leave-to { opacity: 0; }
+
+/* Skeleton */
+@keyframes shimmer { to { background-position: -200% 0; } }
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

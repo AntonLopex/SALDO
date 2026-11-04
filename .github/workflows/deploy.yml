@@ -1,0 +1,64 @@
+name: Desplegar en GitHub Pages
+
+# Se ejecuta tras cada actualización de la rama main (y a demanda).
+# Solo publica si TODO pasa: tipos, pruebas y comprobación de seguridad/PWA de la carpeta dist.
+# Pasos de configuración: docs/DEPLOY.md
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run typecheck
+
+      # Solo valores PÚBLICOS (URL del proyecto y clave anon/publishable). Nunca claves de servicio.
+      - name: Compilar
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      # Después de compilar: algunas pruebas inspeccionan dist/.
+      - name: Pruebas
+        run: npm test
+
+      - name: Comprobar PWA y ausencia de secretos en dist
+        run: npm run check:dist
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,85 @@
+name: Copia externa cifrada
+
+# Cada lunes y a demanda. Guarda una copia de tus datos de la nube CIFRADA con tu clave pública (age).
+# Sin tu clave privada nadie puede leerla, ni siquiera quien descargue el archivo.
+# Configuración paso a paso y límites: docs/BACKUPS.md
+# ⚠ NO afirmes que funciona hasta haber lanzado «Run workflow» una vez y comprobado una restauración (docs/BACKUPS.md, sección 5).
+
+on:
+  schedule:
+    - cron: '17 4 * * 1' # lunes 04:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: saldo-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # ¿Está configurado el repositorio privado opcional? (los secretos no se pueden usar directamente en `if`)
+      HAS_PRIVATE_REPO: ${{ secrets.BACKUP_REPO_TOKEN != '' && vars.BACKUP_REPO != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Crear copia cifrada
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+          BACKUP_EMAIL: ${{ secrets.BACKUP_EMAIL }}
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+          AGE_RECIPIENT: ${{ vars.AGE_RECIPIENT }}
+        run: |
+          mkdir -p backup-out
+          npx tsx scripts/backup/cloud-backup.ts "backup-out/saldo-$(date -u +%Y-%m-%d).json.age"
+
+      - name: Comprobar que el archivo está cifrado
+        run: |
+          f=$(ls backup-out/*.age)
+          test -s "$f"
+          head -c 21 "$f" | grep -q 'age-encryption.org/v1'
+          if grep -aq '"app"' "$f"; then echo "ERROR: el archivo contiene texto legible"; exit 1; fi
+          echo "OK: $(wc -c < "$f") bytes, cifrado con age"
+
+      # Opción A (por defecto, sin configuración extra): artefacto de 90 días.
+      - name: Guardar como artefacto (cifrado)
+        uses: actions/upload-artifact@v4
+        with:
+          name: saldo-copia-cifrada
+          path: backup-out/*.age
+          retention-days: 90
+          if-no-files-found: error
+
+      # Opción B (recomendada para conservarlas más tiempo): repositorio PRIVADO aparte.
+      - name: Clonar repositorio privado de copias
+        if: env.HAS_PRIVATE_REPO == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.BACKUP_REPO }}
+          token: ${{ secrets.BACKUP_REPO_TOKEN }}
+          path: backup-repo
+
+      - name: Subir copia cifrada al repositorio privado
+        if: env.HAS_PRIVATE_REPO == 'true'
+        run: |
+          mkdir -p backup-repo/backups
+          cp backup-out/*.age backup-repo/backups/
+          cd backup-repo
+          git config user.name "saldo-backup"
+          git config user.email "saldo-backup@users.noreply.github.com"
+          git add backups
+          git diff --cached --quiet && { echo "Sin cambios"; exit 0; }
+          git commit -m "Copia cifrada $(date -u +%Y-%m-%d)"
+          git push
