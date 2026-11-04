@@ -1,21 +1,30 @@
 import { defineConfig } from 'vitest/config'
+import { loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath, URL } from 'node:url'
+import { cspPlugin } from './scripts/csp.ts'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 
 // GitHub Pages sirve el proyecto en /SALDO/ (repo Antonlopex/SALDO).
 // En desarrollo la app cuelga de /; la compilación Y su vista previa (vite preview) usan /SALDO/ como en producción.
-export default defineConfig(({ command, isPreview }) => ({
+export default defineConfig(({ command, isPreview, mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
+  return {
   base: command === 'build' || isPreview ? '/SALDO/' : '/',
+  build: {
+    // Sin incrustar archivos como data: URI (fuentes incluidas): permite una CSP estricta (font-src 'self') y se precachean igual.
+    assetsInlineLimit: 0,
+  },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
   },
   plugins: [
+    cspPlugin(env.VITE_SUPABASE_URL), // CSP estricta solo en la compilación (en desarrollo rompería el HMR)
     vue(),
     tailwindcss(),
     VitePWA({
@@ -64,4 +73,5 @@ export default defineConfig(({ command, isPreview }) => ({
     testTimeout: 30_000,
     include: ['src/**/*.test.ts', 'tests/db/**/*.test.ts', 'tests/sync/**/*.test.ts', 'tests/backup/**/*.test.ts', 'tests/build/**/*.test.ts'],
   },
-}))
+  }
+})

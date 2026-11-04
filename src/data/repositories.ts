@@ -1,4 +1,5 @@
 import { db } from './db'
+import { plain } from './plain'
 import type { Category, Fund, PlannedExpense, Settings, Tx, TxKind } from '@/domain/types'
 
 const now = () => new Date().toISOString()
@@ -107,7 +108,7 @@ export const categoryRepo = {
 
 export const settingsRepo = {
   async save(settings: Settings): Promise<void> {
-    await db.settings.put({ ...settings, updatedAt: now() })
+    await db.settings.put(plain({ ...settings, updatedAt: now() }))
   },
 }
 
@@ -137,6 +138,6 @@ export const plannedRepo = {
 
 export const fundRepo = {
   async save(fund: Fund): Promise<void> {
-    await db.funds.put({ ...fund, updatedAt: now() })
+    await db.funds.put(plain({ ...fund, updatedAt: now() }))
   },
 }

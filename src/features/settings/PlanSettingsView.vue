@@ -9,7 +9,8 @@ import type { Settings } from '@/domain/types'
 import { openingAmount, plannedSavingTotal } from '@/engine/plan'
 import { showToast } from '@/lib/toast'
 
-const MONTHS = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+// Nombre completo: se ve abreviado («Ene») pero el nombre accesible es el completo («Enero»), sin aria-label que contradiga el texto visible.
+const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const toText = (c: number) => String(c / 100).replace('.', ',')
 
 interface Draft {
@@ -112,10 +113,10 @@ const field = 'mt-1 min-h-12 w-full rounded-2xl border border-line bg-bg px-4 te
             <label class="block"><span class="sr-only">Nombre del ingreso</span><input v-model="inc.name" placeholder="Nombre" :class="field" class="!mt-0" /></label>
             <label class="block"><span class="sr-only">Importe mensual en euros</span><input v-model="inc.amount" inputmode="decimal" placeholder="€/mes" :class="field" class="!mt-0" /></label>
           </div>
-          <div class="grid grid-cols-12 gap-1" role="group" :aria-label="`Meses de ${inc.name || 'ingreso'}`">
-            <button v-for="(l, mi) in MONTHS" :key="mi" type="button" class="press min-h-10 rounded-lg text-xs font-bold"
+          <div class="grid grid-cols-4 gap-1.5" role="group" :aria-label="`Meses de ${inc.name || 'ingreso'}`">
+            <button v-for="(l, mi) in MONTHS" :key="mi" type="button" class="press min-h-11 rounded-xl text-sm font-bold"
               :class="inc.months.includes(mi + 1) ? 'bg-accent text-on-accent' : 'bg-surface text-muted'" :aria-pressed="inc.months.includes(mi + 1)"
-              :aria-label="monthLabel(`2026-${String(mi + 1).padStart(2, '0')}`).split(' ')[0]" @click="toggle(inc.months, mi + 1)">{{ l }}</button>
+              @click="toggle(inc.months, mi + 1)">{{ l.slice(0, 3) }}<span class="sr-only">{{ l.slice(3) }}</span></button>
           </div>
           <button type="button" class="press flex min-h-11 items-center gap-1 text-sm font-semibold text-danger" @click="d.incomes.splice(i, 1)"><Trash2 :size="16" aria-hidden="true" />Quitar</button>
         </div>
@@ -134,10 +135,10 @@ const field = 'mt-1 min-h-12 w-full rounded-2xl border border-line bg-bg px-4 te
         <h2 class="font-bold">Ahorro objetivo por mes</h2>
         <label class="block"><span class="text-sm text-muted">Mes normal (€)</span><input v-model="d.regular" inputmode="decimal" :class="field" /></label>
         <label class="block"><span class="text-sm text-muted">Meses de verano (€)</span><input v-model="d.summer" inputmode="decimal" :class="field" /></label>
-        <div class="grid grid-cols-12 gap-1" role="group" aria-label="Meses de verano">
-          <button v-for="(l, mi) in MONTHS" :key="mi" type="button" class="press min-h-10 rounded-lg text-xs font-bold"
+        <div class="grid grid-cols-4 gap-1.5" role="group" aria-label="Meses de verano">
+          <button v-for="(l, mi) in MONTHS" :key="mi" type="button" class="press min-h-11 rounded-xl text-sm font-bold"
             :class="d.summerMonths.includes(mi + 1) ? 'bg-accent text-on-accent' : 'bg-surface-2 text-muted'" :aria-pressed="d.summerMonths.includes(mi + 1)"
-            :aria-label="monthLabel(`2026-${String(mi + 1).padStart(2, '0')}`).split(' ')[0]" @click="toggle(d.summerMonths, mi + 1)">{{ l }}</button>
+            @click="toggle(d.summerMonths, mi + 1)">{{ l.slice(0, 3) }}<span class="sr-only">{{ l.slice(3) }}</span></button>
         </div>
       </section>
 

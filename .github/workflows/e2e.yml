@@ -1,0 +1,62 @@
+name: Pruebas funcionales (E2E)
+
+# Navegador real (Chromium) sobre la compilación de producción, con service worker.
+# Va separado del despliegue a propósito: un fallo puntual del navegador en CI no debe impedir publicar,
+# pero SÍ debe verse. Mira el resultado en la pestaña Actions antes de dar por buena una versión.
+# Detalle de qué se prueba y de sus límites: docs/TESTING.md
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CHANNEL: chromium # en CI se usa el Chromium de Playwright, no Google Chrome
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Mismos valores PÚBLICOS que el despliegue: así la CSP incluye el dominio real de Supabase
+      - name: Compilar
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Pruebas funcionales, de accesibilidad y de seguridad
+        run: npm run test:e2e
+
+      # Los tiempos de un ejecutor compartido son muy variables: se informan pero no bloquean.
+      # Los presupuestos de PESO (bytes) sí son deterministas; si fallan, míralo.
+      - name: Rendimiento (informativo)
+        run: npm run test:perf
+        continue-on-error: true
+
+      - name: Guardar informe si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-e2e
+          path: test-results/
+          retention-days: 7

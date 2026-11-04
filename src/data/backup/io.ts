@@ -1,4 +1,5 @@
 import { db, type SnapshotRow } from '../db'
+import { plain } from '../plain'
 import { buildBackup, validateBackup, type BackupData, type BackupFile, type ValidationResult } from './format'
 import { transactionsToCsv } from './csv'
 import { decryptWithPassphrase, encryptWithPassphrase, looksEncrypted } from './crypto'
@@ -105,7 +106,8 @@ export async function parseBackupFile(bytes: Uint8Array, passphrase?: string): P
  *    categorías: archivadas). Así la nube refleja el resultado y el historial no se rompe.
  * El llamador debe haber creado antes una copia de seguridad (createSnapshot('pre-restore')).
  */
-export async function restoreBackup(b: BackupFile): Promise<{ written: number; removed: number }> {
+export async function restoreBackup(input: BackupFile): Promise<{ written: number; removed: number }> {
+  const b = plain(input) // la copia llega de la interfaz como objeto reactivo: IndexedDB no puede clonar Proxy
   const now = nowIso()
   let written = 0
   let removed = 0

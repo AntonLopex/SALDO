@@ -55,6 +55,10 @@ El flujo hace, en este orden, y **solo publica si todo pasa**:
 - Crea o confirma la cuenta en la web publicada (necesita que en Supabase la *Site URL* y las *Redirect URLs* incluyan `https://antonlopex.github.io/SALDO/`; ver `docs/SETUP.md`).
 - En el iPhone, abre la web en Safari e instálala (ver `docs/IOS_ATAJOS.md`). Pon el móvil en modo avión y ábrela: debe cargar.
 
+## 5b. Seguridad de la compilación (CSP) y pruebas en la nube
+- La web se publica con una **política de seguridad de contenido** estricta (en un `<meta>`, porque Pages no permite cabeceras): solo scripts propios y conexión únicamente a la propia web y al **dominio exacto de tu Supabase**, tomado de la variable `SUPABASE_URL` en el momento de compilar. **Si cambias de proyecto de Supabase, actualiza esa variable y vuelve a desplegar**; si no, el navegador bloqueará la conexión.
+- Además del despliegue, el flujo **Pruebas funcionales (E2E)** (`e2e.yml`) ejecuta la app en un navegador real en cada push y pull request. Va separado a propósito: no bloquea el despliegue, pero mira su resultado en la pestaña Actions.
+
 ## 6. Actualizaciones controladas
 Cada `push` a `main` publica una versión nueva. Quien tenga la app abierta **no se recarga sola**: ve el aviso «Nueva versión disponible» y pulsa **Actualizar** cuando le convenga (también en Ajustes → *Buscar actualización*). La app busca versiones nuevas al volver a ella y cada hora. Tus datos locales no se tocan; los cambios de estructura de la base local se migran solos al abrir.
 

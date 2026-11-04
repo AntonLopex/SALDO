@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { ChartColumn, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import type { EChartsOption } from 'echarts'
 import Chart from '@/components/charts/Chart.vue'
-import { chartColors, eur, eur2, monthShort, reduceMotion, themeTick } from '@/components/charts/theme'
+import { chartColors, eur, monthShort, reduceMotion, themeTick } from '@/components/charts/theme'
+import { itemTooltip, moneyTooltip } from '@/components/charts/tooltips'
 import Card from '@/components/ui/Card.vue'
 import Chip from '@/components/ui/Chip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -46,12 +47,6 @@ const base = () => {
   return { c, animation: !reduceMotion(), textStyle: { color: c.text, fontFamily: 'inherit' } }
 }
 const axisStyle = (c: ReturnType<typeof chartColors>) => ({ axisLabel: { color: c.text }, axisLine: { lineStyle: { color: c.line } }, splitLine: { lineStyle: { color: c.line } } })
-const moneyTip = (items: unknown) =>
-  (items as { axisValueLabel: string; marker: string; seriesName: string; value: number | null }[])
-    .filter((i) => i.value !== null && i.value !== undefined)
-    .map((i) => `${i.marker}${i.seriesName}: <b>${eur2(Number(i.value))}</b>`).join('<br/>')
-    .replace(/^/, (items as { axisValueLabel: string }[])[0]?.axisValueLabel + '<br/>')
-
 // ----- Patrimonio: real (continuo) + previsión (discontinuo) -----
 const startYm = computed(() => settings.value.planStart)
 const monthsAxis = computed(() => {
@@ -68,7 +63,7 @@ const worthOption = computed<EChartsOption>(() => {
   const nowWorth = fc.value.worthNow
   return {
     animation, textStyle, grid: { left: 8, right: 12, top: 16, bottom: 8, containLabel: true },
-    tooltip: { trigger: 'axis', formatter: moneyTip as never },
+    tooltip: { trigger: 'axis', formatter: moneyTooltip as never },
     xAxis: { type: 'category', data: monthsAxis.value.map(monthShort), ...axisStyle(c), axisLabel: { color: c.text, interval: 'auto' } },
     yAxis: { type: 'value', scale: true, ...axisStyle(c), axisLabel: { color: c.text, formatter: (v: number) => eur(v * 100) } },
     series: [
@@ -89,7 +84,7 @@ const goalOption = computed<EChartsOption>(() => {
   const g = settings.value.goals
   return {
     animation, textStyle, grid: { left: 8, right: 12, top: 16, bottom: 8, containLabel: true },
-    tooltip: { trigger: 'axis', formatter: moneyTip as never },
+    tooltip: { trigger: 'axis', formatter: moneyTooltip as never },
     xAxis: { type: 'category', data: monthsAxis.value.map(monthShort), ...axisStyle(c) },
     yAxis: { type: 'value', ...axisStyle(c), axisLabel: { color: c.text, formatter: (v: number) => eur(v * 100) } },
     series: [
@@ -119,7 +114,7 @@ const incExpOption = computed<EChartsOption>(() => {
   const { c, animation, textStyle } = base()
   return {
     animation, textStyle, grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
-    tooltip: { trigger: 'axis', formatter: moneyTip as never },
+    tooltip: { trigger: 'axis', formatter: moneyTooltip as never },
     xAxis: { type: 'category', data: series.value.map((p) => monthShort(p.ym)), ...axisStyle(c) },
     yAxis: { type: 'value', ...axisStyle(c), axisLabel: { color: c.text, formatter: (v: number) => eur(v * 100) } },
     series: [
@@ -133,7 +128,7 @@ const savingOption = computed<EChartsOption>(() => {
   const { c, animation, textStyle } = base()
   return {
     animation, textStyle, grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
-    tooltip: { trigger: 'axis', formatter: moneyTip as never },
+    tooltip: { trigger: 'axis', formatter: moneyTooltip as never },
     xAxis: { type: 'category', data: series.value.map((p) => monthShort(p.ym)), ...axisStyle(c) },
     yAxis: { type: 'value', ...axisStyle(c), axisLabel: { color: c.text, formatter: (v: number) => eur(v * 100) } },
     series: [
@@ -154,7 +149,7 @@ const donutOption = computed<EChartsOption>(() => {
   const { c, animation, textStyle } = base()
   return {
     animation, textStyle,
-    tooltip: { trigger: 'item', formatter: (p: unknown) => { const q = p as { name: string; value: number; percent: number }; return `${q.name}: <b>${eur2(q.value * 100)}</b> (${q.percent.toFixed(0)} %)` } },
+    tooltip: { trigger: 'item', formatter: (p: unknown) => itemTooltip(p as { name: string; value: number; percent: number }) },
     series: [{ type: 'pie', radius: ['58%', '82%'], avoidLabelOverlap: true, label: { show: false }, itemStyle: { borderColor: c.surface, borderWidth: 3, borderRadius: 6 },
       data: slices.value.map((s) => ({ name: s.name, value: s.cents / 100, itemStyle: { color: s.color } })) }],
   }

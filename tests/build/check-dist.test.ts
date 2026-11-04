@@ -78,4 +78,52 @@ describe.skipIf(!hasDist)('verificador de dist', () => {
     writeFileSync(p, JSON.stringify(m))
     expect(check(d).out).toMatch(/maskable/)
   })
+
+  describe('política de seguridad de contenido', () => {
+    const CSP_RE = /(http-equiv="Content-Security-Policy" content=")([^"]*)(")/
+    const withCsp = (fn: (csp: string) => string) => {
+      const d = copyDist()
+      const idx = join(d, 'index.html')
+      const html = readFileSync(idx, 'utf8')
+      const next = html.replace(CSP_RE, (_m, a, csp, c) => a + fn(csp) + c)
+      writeFileSync(idx, next)
+      writeFileSync(join(d, '404.html'), next) // 404.html debe seguir siendo copia
+      return check(d)
+    }
+    it('exige que exista', () => {
+      const d = copyDist()
+      const html = readFileSync(join(d, 'index.html'), 'utf8').replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '')
+      writeFileSync(join(d, 'index.html'), html)
+      writeFileSync(join(d, '404.html'), html)
+      expect(check(d).out).toMatch(/no incluye la Content-Security-Policy/)
+    })
+    it.each([
+      ["script-src 'self'", "script-src 'self' 'unsafe-inline'", /unsafe-/],
+      ["script-src 'self'", "script-src 'self' 'unsafe-eval'", /unsafe-/],
+      ["script-src 'self'", "script-src 'self' https://cdn.evil.example", /script-src debe ser exactamente/],
+      ["object-src 'none'", "object-src 'self'", /object-src/],
+      ["default-src 'self'", "default-src *", /comodines/],
+    ])('detecta el debilitamiento %s → %s', (from, to, re) => {
+      const r = withCsp((csp) => csp.replace(from, to))
+      expect(r.code).toBe(1)
+      expect(r.out).toMatch(re)
+    })
+    it('connect-src solo admite tu dominio de Supabase, no otros', () => {
+      expect(withCsp((csp) => csp.replace(/connect-src [^;]*/, "connect-src 'self' https://abc.supabase.co")).code).toBe(0)
+      const bad = withCsp((csp) => csp.replace(/connect-src [^;]*/, "connect-src 'self' https://evil.example"))
+      expect(bad.code).toBe(1)
+      expect(bad.out).toMatch(/connect-src/)
+      expect(withCsp((csp) => csp.replace(/connect-src [^;]*/, "connect-src 'self' https://a.supabase.co https://b.supabase.co")).code).toBe(1)
+    })
+    it('detecta un script en línea en index.html', () => {
+      const d = copyDist()
+      const idx = join(d, 'index.html')
+      const html = readFileSync(idx, 'utf8').replace('</head>', '<script>alert(1)</script></head>')
+      writeFileSync(idx, html)
+      writeFileSync(join(d, '404.html'), html)
+      const r = check(d)
+      expect(r.code).toBe(1)
+      expect(r.out).toMatch(/script en línea/)
+    })
+  })
 })

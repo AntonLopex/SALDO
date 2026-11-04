@@ -1,7 +1,7 @@
 import { liveQuery } from 'dexie'
 import { ref, watch } from 'vue'
 import { session } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { getSupabase, isSupabaseConfigured } from '@/lib/supabase'
 import { resetBackoff, runSync, syncSnapshot, type SyncReport, type SyncSnapshot } from './engine'
 import { supabaseRemote } from './remote'
 
@@ -27,7 +27,7 @@ let debounce: ReturnType<typeof setTimeout> | undefined
 let retry: ReturnType<typeof setTimeout> | undefined
 let failures = 0
 
-const canSync = () => !!supabase && !!session.value?.user
+const canSync = () => isSupabaseConfigured && !!session.value?.user
 
 function schedule(ms: number) {
   clearTimeout(debounce)
@@ -78,7 +78,10 @@ export async function syncNow(): Promise<void> {
   syncStatus.value = 'syncing'
   try {
     const exec = async () => {
-      const rep = await runSync({ remote: supabaseRemote(supabase!), userId: session.value!.user.id })
+      const sb = await getSupabase() // se carga la librería de la nube solo ahora que hace falta
+      const userId = session.value?.user.id
+      if (!sb || !userId) { syncStatus.value = 'disabled'; return }
+      const rep = await runSync({ remote: supabaseRemote(sb), userId })
       syncSnap.value = await syncSnapshot()
       apply(rep)
     }

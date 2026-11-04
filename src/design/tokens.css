@@ -8,11 +8,11 @@
   --surface-2: #ece9e2;
   --text: #101820;
   --muted: #5c6770;
-  --accent: #1e9b6c;
+  --accent: #14734f; /* AA: ≥4,8:1 sobre todos los fondos claros; blanco sobre él 5,8:1 */
   --accent-deep: #d8f0e5;
   --on-accent: #ffffff;
-  --danger: #d9483b;
-  --warning: #a8730f;
+  --danger: #b93429; /* AA: ≥4,8:1 */
+  --warning: #855700; /* AA: ≥5,1:1 */
   --border: rgb(16 24 32 / 0.08);
   --shadow: 0 1px 2px rgb(16 24 32 / 0.04), 0 8px 24px -8px rgb(16 24 32 / 0.1);
 }

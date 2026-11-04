@@ -11,7 +11,7 @@ const need = (f) => {
 }
 
 // 1) Archivos imprescindibles de la PWA y de GitHub Pages
-for (const f of ['index.html', '404.html', 'manifest.webmanifest', 'sw.js', 'favicon.svg', 'apple-touch-icon.png']) need(f)
+for (const f of ['index.html', '404.html', 'manifest.webmanifest', 'sw.js', 'favicon.svg', 'apple-touch-icon.png', 'theme-init.js']) need(f)
 
 // 2) El 404.html debe ser la app (así /nuevo-gasto abre directamente en GitHub Pages)
 if (existsSync(join(dist, 'index.html')) && existsSync(join(dist, '404.html'))) {
@@ -35,6 +35,26 @@ if (existsSync(join(dist, 'index.html'))) {
   if (!/rel="manifest"/.test(html)) fail('index.html no enlaza el manifest')
   if (!/apple-touch-icon/.test(html)) fail('index.html no enlaza el icono de Apple')
   if (/(src|href)="\/(?!SALDO\/)[^"/]/.test(html)) fail('index.html tiene rutas absolutas fuera de /SALDO/')
+}
+
+// 4b) CSP estricta presente y sin debilidades; ningún script en línea (lo bloquearía la propia CSP)
+if (existsSync(join(dist, 'index.html'))) {
+  const html = readFileSync(join(dist, 'index.html'), 'utf8')
+  const csp = html.match(/http-equiv="Content-Security-Policy" content="([^"]*)"/)?.[1]
+  if (!csp) {
+    fail('index.html no incluye la Content-Security-Policy')
+  } else {
+    const dir = (n) => csp.split('; ').find((d) => d.startsWith(n + ' ')) ?? ''
+    if (dir('script-src') !== "script-src 'self'") fail("CSP: script-src debe ser exactamente 'self'")
+    if (/unsafe-eval|unsafe-inline/.test(csp)) fail('CSP: no se permite unsafe-eval ni unsafe-inline')
+    if (csp.includes('*')) fail('CSP: no se permiten comodines')
+    if (dir('object-src') !== "object-src 'none'") fail('CSP: object-src debe ser none')
+    // connect-src: solo 'self' y, como mucho, UN dominio https de Supabase (el de tu proyecto)
+    if (!/^connect-src 'self'( https:\/\/[a-z0-9-]+\.supabase\.co)?$/.test(dir('connect-src'))) {
+      fail('CSP: connect-src solo puede incluir tu dominio de Supabase')
+    }
+  }
+  if (/<script(?![^>]*\bsrc=)[^>]*>/i.test(html)) fail('index.html contiene un script en línea')
 }
 
 // 5) El service worker precachea el index (navegación sin conexión) y no cachea llamadas a la API
@@ -86,4 +106,4 @@ if (errors.length) {
   console.error('✗ Comprobación de dist FALLIDA:\n' + errors.map((e) => ' - ' + e).join('\n'))
   process.exit(1)
 }
-console.log('✓ dist correcto: PWA completa, base /SALDO/, 404.html de respaldo, sin secretos ni sourcemaps.')
+console.log('✓ dist correcto: PWA completa, base /SALDO/, CSP estricta, 404.html de respaldo, sin secretos ni sourcemaps.')

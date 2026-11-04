@@ -156,3 +156,31 @@ describe('copias internas automáticas', () => {
     void snap
   })
 })
+
+// Regresión: la interfaz entrega objetos REACTIVOS de Vue (Proxy). IndexedDB no puede clonarlos (DataCloneError).
+// Este fallo rompía en producción la restauración de copias y el guardado de fondos, y las pruebas con objetos
+// planos no lo detectaban.
+import { reactive } from 'vue'
+import { fundRepo, settingsRepo } from '@/data/repositories'
+
+describe('datos reactivos de Vue (Proxy) hacia IndexedDB', () => {
+  it('restaurar una copia que viene de la interfaz reactiva no falla', async () => {
+    await addExpense('reactiva', 777)
+    const backup = reactive(await buildLocalBackup()) // como `preview.value.result.backup` en BackupView
+    await expect(restoreBackup(backup as never)).resolves.toMatchObject({ written: expect.any(Number) })
+    expect((await live()).some((t) => t.note === 'reactiva')).toBe(true)
+  })
+  it('guardar un fondo reactivo (con su desglose de costes) no falla y persiste', async () => {
+    const funds = reactive(await db.funds.toArray())
+    const f = funds.find((x) => x.kind === 'independence')!
+    await expect(fundRepo.save({ ...f, allocatedCents: 123456, items: f.items.map((i) => (i.id === 'fianza' ? { ...i, cents: 90000 } : i)) })).resolves.toBeUndefined()
+    const saved = (await db.funds.get(f.id))!
+    expect(saved.allocatedCents).toBe(123456)
+    expect(saved.items.find((i) => i.id === 'fianza')!.cents).toBe(90000)
+  })
+  it('guardar ajustes reactivos no falla', async () => {
+    const st = reactive((await db.settings.get('main'))!)
+    await expect(settingsRepo.save({ ...st, monthlyBudgetCents: 91000 })).resolves.toBeUndefined()
+    expect((await db.settings.get('main'))!.monthlyBudgetCents).toBe(91000)
+  })
+})

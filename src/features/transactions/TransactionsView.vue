@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, ReceiptText, Search } from 'lucide-vue-next'
 import Chip from '@/components/ui/Chip.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
@@ -36,6 +36,23 @@ const groups = computed(() => {
   for (const t of filtered.value) (m.get(t.occurredOn) ?? m.set(t.occurredOn, []).get(t.occurredOn)!).push(t)
   return [...m].map(([day, items]) => ({ day, items, total: net(items) }))
 })
+
+// Se pintan por tandas (días completos, así los totales siguen siendo exactos): con cientos de movimientos,
+// pintarlos todos de golpe tardaba varios segundos en un móvil modesto.
+const PAGE = 100
+const limit = ref(PAGE)
+watch([query, kind, catFilter, from, to], () => { limit.value = PAGE })
+const visibleGroups = computed(() => {
+  const out: typeof groups.value = []
+  let count = 0
+  for (const g of groups.value) {
+    if (count >= limit.value) break
+    out.push(g)
+    count += g.items.length
+  }
+  return out
+})
+const remaining = computed(() => filtered.value.length - visibleGroups.value.reduce((n, g) => n + g.items.length, 0))
 
 // Calendario
 const calMonth = ref(monthOf(todayISO()))
@@ -82,26 +99,29 @@ function clear() { query.value = ''; catFilter.value = ''; from.value = ''; to.v
       <div class="grid grid-cols-3 gap-2 text-sm">
         <label class="col-span-3 block">
           <span class="sr-only">Filtrar por categoría</span>
-          <select v-model="catFilter" class="min-h-12 w-full rounded-2xl border border-line bg-surface px-4">
+          <select v-model="catFilter" class="min-h-12 w-full rounded-2xl border border-line bg-surface px-4 text-base">
             <option value="">Todas las categorías</option>
             <option v-for="c in topCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </label>
         <label class="col-span-3 grid grid-cols-2 gap-2">
           <span class="sr-only">Desde y hasta</span>
-          <input v-model="from" type="date" aria-label="Desde" class="min-h-12 rounded-2xl border border-line bg-surface px-3" />
-          <input v-model="to" type="date" aria-label="Hasta" class="min-h-12 rounded-2xl border border-line bg-surface px-3" />
+          <input v-model="from" type="date" aria-label="Desde" class="min-h-12 rounded-2xl border border-line bg-surface px-3 text-base" />
+          <input v-model="to" type="date" aria-label="Hasta" class="min-h-12 rounded-2xl border border-line bg-surface px-3 text-base" />
         </label>
       </div>
       <button v-if="hasFilters" type="button" class="press min-h-11 text-sm font-semibold text-accent" @click="clear">Quitar filtros</button>
 
-      <section v-for="g in groups" :key="g.day" class="rounded-card border border-line bg-surface px-5 py-3 shadow-card">
+      <section v-for="g in visibleGroups" :key="g.day" class="rounded-card border border-line bg-surface px-5 py-3 shadow-card">
         <div class="flex items-baseline justify-between py-1 text-sm">
           <h2 class="font-bold">{{ dayLabel(g.day) }}</h2>
           <span class="num font-semibold text-muted">{{ g.total < 0 ? '−' : '+' }}{{ formatCents(Math.abs(g.total)) }}</span>
         </div>
         <div class="divide-y divide-line"><TxRow v-for="t in g.items" :key="t.id" :tx="t" /></div>
       </section>
+      <button v-if="remaining > 0" type="button" class="press min-h-14 w-full rounded-2xl bg-surface-2 font-semibold" @click="limit += PAGE">
+        Mostrar más ({{ remaining }} restantes)
+      </button>
       <EmptyState v-if="!groups.length" :icon="ReceiptText" :title="real.length ? 'Sin resultados' : 'Aún no hay movimientos'" :text="real.length ? 'Prueba con otros filtros.' : 'Tus ingresos y gastos aparecerán aquí.'" />
     </template>
 

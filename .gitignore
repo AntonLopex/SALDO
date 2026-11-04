@@ -14,3 +14,7 @@ age-identity*
 
 # Configuración local del asistente
 .claude/
+
+# Resultados de Playwright
+test-results/
+playwright-report/

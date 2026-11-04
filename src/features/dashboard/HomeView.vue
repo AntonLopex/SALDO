@@ -78,7 +78,7 @@ const horizons = computed(() => [
           <p class="text-sm font-semibold text-muted">Mi patrimonio</p>
           <p class="mt-1 text-4xl font-extrabold tracking-tight"><AnimatedNumber :cents="worth" /></p>
         </div>
-        <RouterLink to="/objetivos" class="press rounded-full px-3 py-1.5 text-xs font-bold" :class="trackUi.cls">{{ trackUi.label }}</RouterLink>
+        <RouterLink to="/objetivos" class="press inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-bold" :class="trackUi.cls">{{ trackUi.label }}</RouterLink>
       </div>
       <p v-if="month.count" class="num mt-1 text-sm font-semibold" :class="month.saving >= 0 ? 'text-accent' : 'text-danger'">
         {{ signed(month.saving) }} <span class="font-normal text-muted">en {{ monthLabel(ym).toLowerCase() }}</span>

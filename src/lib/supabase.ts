@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { classifyKey } from './supabaseKey'
 
 const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim()
@@ -15,7 +15,26 @@ function status(): SupabaseStatus {
 export const supabaseStatus: SupabaseStatus = status()
 export const isSupabaseConfigured = supabaseStatus === 'ready'
 
-/** null si no hay configuración válida: la app funciona igualmente en local. */
-export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(url!, key!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
-  : null
+let client: Promise<SupabaseClient> | null = null
+
+/**
+ * El cliente de Supabase (~57 KB comprimidos) se carga SOLO cuando hace falta: al restaurar una sesión guardada,
+ * al iniciar sesión o al sincronizar. Quien usa la app sin cuenta nunca lo descarga.
+ * Devuelve null si no hay una configuración válida: la app funciona igualmente en local.
+ */
+export function getSupabase(): Promise<SupabaseClient | null> {
+  if (!isSupabaseConfigured) return Promise.resolve(null)
+  client ??= import('@supabase/supabase-js').then((m) =>
+    m.createClient(url!, key!, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }),
+  )
+  return client
+}
+
+/** ¿Hay una sesión de Supabase guardada en este navegador? (Se mira sin cargar la librería.) */
+export function hasStoredSession(): boolean {
+  try {
+    return Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k))
+  } catch {
+    return false
+  }
+}
