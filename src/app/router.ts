@@ -41,6 +41,8 @@ export const router = createRouter({
     { path: '/anadir', name: 'anadir', component: () => import('@/features/quick-add/QuickAddView.vue'), meta: { layout: 'bare' } },
     // Ruta independiente para el atajo de iOS: solo el formulario rápido.
     { path: '/nuevo-gasto', name: 'nuevo-gasto', component: () => import('@/features/quick-add/QuickAddView.vue'), meta: { layout: 'bare' } },
+    // Igual que el anterior pero abre en «Ingreso». Una ruta propia (no un parámetro) sobrevive mejor a «Añadir a pantalla de inicio» en iOS.
+    { path: '/nuevo-ingreso', name: 'nuevo-ingreso', component: () => import('@/features/quick-add/QuickAddView.vue'), meta: { layout: 'bare' } },
     { path: '/bienvenida', name: 'bienvenida', component: () => import('@/features/onboarding/WelcomeView.vue'), meta: { layout: 'bare' } },
     { path: '/:pathMatch(.*)*', name: 'no-encontrada', component: () => import('@/features/ErrorView.vue'), meta: { layout: 'bare' } },
   ],
@@ -49,7 +51,7 @@ export const router = createRouter({
 
 router.beforeEach((to) => {
   // El atajo /nuevo-gasto nunca se interpone con la bienvenida.
-  if (to.name === 'nuevo-gasto' || to.name === 'bienvenida' || to.name === 'no-encontrada') return true
+  if (to.name === 'nuevo-gasto' || to.name === 'nuevo-ingreso' || to.name === 'bienvenida' || to.name === 'no-encontrada') return true
   if (!isOnboarded()) return { name: 'bienvenida' }
   return true
 })

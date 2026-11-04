@@ -2,7 +2,7 @@
 
 Aplicación personal de finanzas y ahorro: registra un gasto en segundos desde el iPhone, mira cuánto ahorras y cómo te acercas a tu objetivo. Funciona **sin conexión** y es gratuita de mantener.
 
-**Web publicada:** <https://antonlopex.github.io/SALDO/> · **Acceso directo al formulario:** `/nuevo-gasto`
+**Web publicada:** <https://antonlopex.github.io/SALDO/> · **Accesos directos:** `/nuevo-gasto` y `/nuevo-ingreso` (con `?importe=3,50&categoria=cafe`, ver [docs/IOS_ATAJOS.md](docs/IOS_ATAJOS.md))
 
 ## Qué hace
 - **Registro ultrarrápido** de gastos e ingresos (importe, categoría favorita, fecha de hoy), con deshacer y duplicar.
@@ -35,7 +35,7 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_...      # SOLO la clave pública. Jamás 
 | `npm run build` | Comprueba tipos y compila para producción (con PWA) |
 | `npm run preview` | Sirve la compilación en `http://localhost:4173/SALDO/` |
 | `npm run check:dist` | Verifica PWA, CSP y ausencia de secretos en `dist/` |
-| `npm test` | 220 pruebas unitarias y de integración |
+| `npm test` | 257 pruebas unitarias y de integración |
 | `npm run test:e2e` | Pruebas en navegador real: funcionales, accesibilidad, seguridad |
 | `npm run test:perf` | Presupuestos de peso y tiempo |
 | `npm run test:all` | Todo lo anterior |

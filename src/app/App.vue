@@ -10,7 +10,7 @@ import UpdateBanner from '@/components/ui/UpdateBanner.vue'
 const route = useRoute()
 // Splash breve; nunca en el atajo rápido ni con movimiento reducido.
 const skipSplash =
-  location.pathname.endsWith('/nuevo-gasto') || matchMedia('(prefers-reduced-motion: reduce)').matches
+  /\/nuevo-(gasto|ingreso)$/.test(location.pathname) || matchMedia('(prefers-reduced-motion: reduce)').matches
 const splash = ref(!skipSplash)
 onMounted(() => {
   if (splash.value) setTimeout(() => (splash.value = false), 900)

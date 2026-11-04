@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Check, Copy, Trash2, X } from 'lucide-vue-next'
 import Chip from '@/components/ui/Chip.vue'
@@ -9,6 +9,7 @@ import { plannedRepo, txRepo } from '@/data/repositories'
 import { DEFAULTS } from '@/domain/defaults'
 import { addDaysISO, dayLabel, todayISO } from '@/domain/dates'
 import { formatCents, parseEuros } from '@/domain/money'
+import { parseQuickParams } from '@/domain/quickParams'
 import type { Tx } from '@/domain/types'
 import { iconFor } from '@/lib/icons'
 import { showToast } from '@/lib/toast'
@@ -17,7 +18,8 @@ const route = useRoute()
 const router = useRouter()
 
 const editId = computed(() => (typeof route.params.id === 'string' ? route.params.id : null))
-const kind = ref<'expense' | 'income'>('expense')
+// /nuevo-ingreso abre directamente en «Ingreso»; el resto, en «Gasto»
+const kind = ref<'expense' | 'income'>(route.name === 'nuevo-ingreso' ? 'income' : 'expense')
 const amountText = ref('')
 const categoryId = ref<string | null>(null)
 const subcategoryId = ref<string | null>(null)
@@ -206,9 +208,38 @@ onMounted(async () => {
     if (t && !t.deletedAt && (t.kind === 'income' || t.kind === 'expense')) load(t, !!dupId)
     else if (editId.value) { showToast('No se encontró el movimiento'); leave(); return }
   }
-  await nextTick()
-  if (!source) amountEl.value?.focus()
 })
+
+/**
+ * Cuando los datos locales están listos:
+ *  1) se aplican los parámetros de la URL (/nuevo-gasto?importe=3,50&categoria=Café) SOLO como relleno del formulario;
+ *     nunca se guarda nada desde un enlace (ver src/domain/quickParams.ts);
+ *  2) se enfoca el importe. Antes se intentaba en onMounted, cuando el campo aún no existía (se pinta tras cargar los datos).
+ */
+let startupDone = false
+watch(
+  dataReady,
+  async (ready) => {
+    if (!ready || startupDone) return
+    startupDone = true
+    const dupId = typeof route.query.duplicar === 'string'
+    const prefilled = !!editId.value || dupId || typeof route.query.planificado === 'string'
+    if (!prefilled) {
+      const q = parseQuickParams(route.query, categories.value, kind.value)
+      if (q.kind) kind.value = q.kind
+      if (q.amountText) amountText.value = q.amountText
+      if (q.categoryId && kind.value === 'expense') {
+        categoryId.value = q.categoryId
+        subcategoryId.value = q.subcategoryId ?? null
+      }
+      if (q.note) note.value = q.note
+    }
+    await nextTick()
+    // Con el importe ya relleno no se roba el foco: el siguiente paso es elegir categoría o guardar.
+    if (!editId.value && !dupId && !amountText.value) amountEl.value?.focus()
+  },
+  { immediate: true },
+)
 
 const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value === 'expense' ? 'Nuevo gasto' : 'Nuevo ingreso'))
 </script>

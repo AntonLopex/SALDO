@@ -52,7 +52,10 @@ export default defineConfig(({ command, isPreview, mode }) => {
           { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
         // Android/escritorio: pulsación larga sobre el icono. iOS ignora los accesos directos del manifest.
-        shortcuts: [{ name: 'Nuevo gasto', short_name: 'Gasto', description: 'Registrar un gasto al instante', url: 'nuevo-gasto', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] }],
+        shortcuts: [
+          { name: 'Nuevo gasto', short_name: 'Gasto', description: 'Registrar un gasto al instante', url: 'nuevo-gasto', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Nuevo ingreso', short_name: 'Ingreso', description: 'Registrar un ingreso al instante', url: 'nuevo-ingreso', icons: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
