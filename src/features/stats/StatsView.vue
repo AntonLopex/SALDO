@@ -184,7 +184,7 @@ const targetReach = computed(() => forecastAtMonth(fc.value, settings.value.targ
       <dl class="grid grid-cols-3 gap-2 text-center">
         <div><dt class="text-xs text-muted">Ingresos</dt><dd class="num mt-0.5 font-bold text-accent">{{ formatCents(sum.income) }}</dd></div>
         <div><dt class="text-xs text-muted">Gastos</dt><dd class="num mt-0.5 font-bold text-danger">{{ formatCents(sum.expense) }}</dd></div>
-        <div><dt class="text-xs text-muted">Ahorro</dt><dd class="num mt-0.5 font-bold">{{ fmtDiff(sum.saving) }}</dd></div>
+        <div><dt class="text-xs text-muted">Ahorro</dt><dd class="num mt-0.5 font-bold">{{ sum.income > 0 ? fmtDiff(sum.saving) : '—' }}</dd></div>
       </dl>
       <template v-if="prev.count && sum.count">
         <p class="mt-3 border-t border-line pt-3 text-center text-xs text-muted">

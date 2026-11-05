@@ -10,6 +10,7 @@ import TxRow from '@/components/ui/TxRow.vue'
 import { dataReady, lastExport, settings, txs } from '@/data/appData'
 import { addMonths, monthLabel, monthOf } from '@/domain/dates'
 import { formatCents, formatCentsRounded } from '@/domain/money'
+import { pendingIncomePlans } from '@/engine/pending'
 import { budgetStatus, compareMonths, monthSummary } from '@/engine/summary'
 import { useFinance } from '@/features/useFinance'
 
@@ -26,6 +27,10 @@ const recent = computed(() =>
   txs.value.filter((t) => t.kind === 'income' || t.kind === 'expense')
     .sort((a, b) => b.occurredOn.localeCompare(a.occurredOn) || b.createdAt.localeCompare(a.createdAt)).slice(0, 5),
 )
+
+// Ingresos previstos de este mes que aún no se han registrado (cada uno abre el formulario de ingreso ya relleno)
+const pendingIncomes = computed(() => pendingIncomePlans(txs.value, settings.value, ym))
+const amountParam = (cents: number) => String(cents / 100).replace('.', ',')
 
 // Recordatorio de copia: solo si hay datos reales y llevan más de 30 días sin exportarse
 const needsBackup = computed(() => {
@@ -98,9 +103,11 @@ const horizons = computed(() => [
       <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
         <div><dt class="text-xs text-muted">Ingresos</dt><dd class="num mt-0.5 font-bold text-accent">{{ formatCents(month.income) }}</dd></div>
         <div><dt class="text-xs text-muted">Gastos</dt><dd class="num mt-0.5 font-bold text-danger">{{ formatCents(month.expense) }}</dd></div>
-        <div><dt class="text-xs text-muted">Ahorro</dt><dd class="num mt-0.5 font-bold">{{ signed(month.saving) }}</dd></div>
+        <!-- Sin ingresos registrados, «ingresos − gastos» saldría siempre negativo y asustaría sin motivo: no se muestra -->
+        <div><dt class="text-xs text-muted">Ahorro</dt><dd class="num mt-0.5 font-bold">{{ month.income > 0 ? signed(month.saving) : '—' }}</dd></div>
       </dl>
       <p v-if="savingPct !== null" class="mt-2 text-center text-xs text-muted">Ahorras el {{ savingPct }} % de tus ingresos</p>
+      <p v-else class="mt-2 text-center text-xs text-muted">Sin ingresos registrados este mes: el ahorro se calcula al registrarlos.</p>
 
       <div class="mt-5 flex items-baseline justify-between text-sm">
         <span class="font-semibold">Presupuesto {{ formatCentsRounded(settings.monthlyBudgetCents) }}</span>
@@ -111,6 +118,24 @@ const horizons = computed(() => [
       <div class="mt-2"><ProgressBar :value="bud.pct" :tone="budgetTone" label="Presupuesto gastado este mes" /></div>
       <p v-if="budgetMsg" class="mt-3 text-sm font-semibold" :class="budgetTone === 'danger' ? 'text-danger' : budgetTone === 'warning' ? 'text-warning' : 'text-muted'" role="status">{{ budgetMsg }}</p>
     </Card>
+
+    <section v-if="pendingIncomes.length" class="rounded-card border border-line bg-surface p-5 shadow-card" aria-labelledby="pend-h">
+      <h2 id="pend-h" class="font-bold">Ingresos previstos pendientes</h2>
+      <p class="mt-1 text-xs text-muted">Aún no los has registrado este mes. No se apunta nada hasta que pulses Guardar.</p>
+      <ul class="mt-2 divide-y divide-line">
+        <li v-for="p in pendingIncomes" :key="p.id" class="flex min-h-16 items-center gap-3">
+          <span class="min-w-0 flex-1">
+            <span class="block truncate font-semibold">{{ p.name }}</span>
+            <span class="num text-sm text-muted">{{ formatCents(p.pendingCents) }}</span>
+          </span>
+          <RouterLink
+            :to="{ path: '/nuevo-ingreso', query: { importe: amountParam(p.pendingCents), nota: p.name } }"
+            :aria-label="`Registrar ingreso: ${p.name}`"
+            class="press inline-flex min-h-11 shrink-0 items-center rounded-xl bg-accent px-4 text-sm font-bold text-on-accent"
+          >Registrar</RouterLink>
+        </li>
+      </ul>
+    </section>
 
     <RouterLink v-if="needsBackup" to="/ajustes/copias" class="press block rounded-card border border-warning/40 bg-warning/10 p-4 text-sm" role="status">
       <b>Haz una copia de seguridad.</b> {{ lastExport ? 'Hace más de 30 días de tu última exportación.' : 'Todavía no has exportado ninguna.' }}

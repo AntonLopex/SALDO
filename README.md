@@ -35,7 +35,7 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_...      # SOLO la clave pública. Jamás 
 | `npm run build` | Comprueba tipos y compila para producción (con PWA) |
 | `npm run preview` | Sirve la compilación en `http://localhost:4173/SALDO/` |
 | `npm run check:dist` | Verifica PWA, CSP y ausencia de secretos en `dist/` |
-| `npm test` | 257 pruebas unitarias y de integración |
+| `npm test` | 267 pruebas unitarias y de integración |
 | `npm run test:e2e` | Pruebas en navegador real: funcionales, accesibilidad, seguridad |
 | `npm run test:perf` | Presupuestos de peso y tiempo |
 | `npm run test:all` | Todo lo anterior |

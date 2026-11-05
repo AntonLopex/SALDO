@@ -6,8 +6,8 @@ Este documento dice **qué se ha probado, cómo, qué se encontró y qué NO se 
 
 | Capa | Herramienta | Pruebas | Qué cubre |
 |---|---|---|---|
-| Unitarias + integración | Vitest | **257** (16 archivos) | Cálculos, esquema SQL y RLS, sincronización, copias, seguridad de la compilación, parámetros de URL |
-| Funcionales, accesibilidad, seguridad | Playwright | **64** | La app real en un navegador: flujo diario, accesos directos, ajustes, sin conexión, copias, WCAG, CSP |
+| Unitarias + integración | Vitest | **267** (17 archivos) | Cálculos, esquema SQL y RLS, sincronización, copias, seguridad de la compilación, parámetros de URL, ingresos pendientes |
+| Funcionales, accesibilidad, seguridad | Playwright | **72** | La app real en un navegador: flujo diario, accesos directos, ajustes, sin conexión, copias, WCAG, CSP |
 | Rendimiento | Playwright | **6** | Peso del arranque y tiempos con CPU 4× más lenta |
 
 Cómo ejecutarlas:
@@ -41,6 +41,7 @@ Formato, checksum, validación de integridad, CSV (incluida la inyección de fó
 ### La app en un navegador real (`tests/e2e`)
 - **Flujo diario:** primera vez, `/nuevo-gasto` directo, registrar un café, validaciones, deshacer, duplicar, editar, eliminar, buscar, calendario.
 - **Accesos directos** (`acceso-directo.spec.ts`): `/nuevo-ingreso`, y los parámetros `tipo`, `importe`, `categoria`, `nota`. Garantiza que **un enlace solo rellena el formulario y nunca guarda** (probado con mutación: si `?guardar=1` guardara, la prueba falla), que los valores no válidos o ambiguos se ignoran, que una nota con HTML no ejecuta nada y que funcionan sin conexión. Lo que hace iOS con Atajos, iconos y widgets **no** está cubierto (ver `docs/IOS_ATAJOS.md`).
+- **Ingresos pendientes** (`ingresos-pendientes.spec.ts`): la tarjeta «Ingresos previstos pendientes» del inicio, que «Registrar» abre el ingreso relleno **sin guardar**, que cada ingreso registrado sale de la lista (por importe exacto, por el total junto o por cobro parcial), que el ahorro del mes no se muestra mientras no haya ingresos (en vez de un negativo engañoso), y que la tarjeta y la previsión nunca se contradicen (propiedad probada con 300 casos aleatorios). Las pruebas se adaptan al mes en que se ejecutan (julio y agosto no tienen el ingreso del fútbol).
 - **Ajustes y datos:** plan, objetivos, gastos futuros enlazados, fondos, categorías, tema, `prefers-reduced-motion`, **sin conexión con el service worker real (con el servidor apagado)**, exportar/importar/restaurar, copia cifrada.
 - **Móvil y accesibilidad:** sin desbordes de 320 a 430 px, campos de ≥ 16 px (iOS hace zoom por debajo), zonas táctiles ≥ 44 px, **axe-core WCAG 2.1 AA sin infracciones en 11 pantallas × tema claro y oscuro**, y uso con teclado.
 - **Seguridad:** política CSP activa (bloquea scripts en línea y conexiones a dominios ajenos), sin cookies ni tokens, y una copia importada **con checksum válido y un nombre de categoría malicioso** no ejecuta nada.
