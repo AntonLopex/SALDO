@@ -20,7 +20,7 @@ const color = computed(() => (isIncome.value ? 'var(--accent)' : (cat.value?.col
       <component :is="icon" :size="22" aria-hidden="true" />
     </span>
     <span class="min-w-0 flex-1">
-      <span class="block truncate font-semibold">{{ isIncome ? 'Ingreso' : categoryLabel(tx) }}</span>
+      <span class="block truncate font-semibold">{{ isIncome ? (tx.categoryId ? 'Reembolso · ' + categoryLabel(tx) : 'Ingreso') : categoryLabel(tx) }}</span>
       <span v-if="tx.note" class="block truncate text-sm text-muted">{{ tx.note }}</span>
     </span>
     <span class="num font-bold" :class="isIncome ? 'text-accent' : 'text-ink'">{{ isIncome ? '+' : '−' }}{{ formatCents(tx.amountCents) }}</span>

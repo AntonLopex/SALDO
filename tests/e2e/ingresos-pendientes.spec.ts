@@ -135,3 +135,39 @@ test.describe('tarjeta de ingresos previstos pendientes', () => {
     expect(despues).toBe(antes) // el ingreso previsto ya estaba contado en la previsión
   })
 })
+
+test.describe('reembolsos: un ingreso con categoría descuenta del gasto y del presupuesto', () => {
+  test('viaje de 1.000 € y la pareja devuelve 500 €: el presupuesto se recalcula', async ({ page }) => {
+    await page.goto('nuevo-gasto')
+    await dataReady(page)
+    await fillExpense(page, { amount: '1000', category: 'Café' })
+    await saveExpense(page)
+    await page.getByRole('button', { name: 'Abrir SALDO' }).click()
+    await dataReady(page)
+    await expect(page.getByText(/Superado en 210,00\s€/)).toBeVisible()
+
+    // El reembolso: ingreso de 500 € con la categoría del gasto
+    await page.goto('nuevo-ingreso')
+    await dataReady(page)
+    await page.getByLabel('Importe en euros').fill('500')
+    await page.getByRole('button', { name: 'Café' }).click()
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+    await expect(page.getByText(/500,00\s€ · Reembolso · Café/)).toBeVisible()
+    await page.getByRole('button', { name: 'Abrir SALDO' }).click()
+    await dataReady(page)
+
+    await expect(page.getByText(/Quedan 290,00\s€/)).toBeVisible()
+    await expect(page.getByText(/Superado en/)).toHaveCount(0)
+    await expect(page.getByText(/Incluye 500,00\s€ de reembolsos/)).toBeVisible()
+  })
+
+  test('cambiar de gasto a ingreso no arrastra la categoría (no se crea un reembolso sin querer)', async ({ page }) => {
+    await page.goto('nuevo-gasto')
+    await dataReady(page)
+    await page.getByRole('button', { name: 'Café' }).click()
+    await page.getByRole('radio', { name: 'Ingreso' }).click()
+    await page.getByLabel('Importe en euros').fill('100')
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+    await expect(page.getByText(/100,00\s€ · Ingreso$/)).toBeVisible()
+  })
+})

@@ -14,6 +14,12 @@ const income = (cents: number, on = '2026-11-02', extra: Partial<Tx> = {}): Tx =
 const names = (r: ReturnType<typeof pendingIncomePlans>) => r.map((p) => `${p.name}:${p.pendingCents}`)
 
 describe('ingresos previstos pendientes', () => {
+  it('un reembolso (ingreso con categoría) no cubre el sueldo previsto', () => {
+    const r = income(139150, '2026-11-12', { categoryId: 'viajes' })
+    expect(names(pendingIncomePlans([r], S, '2026-11'))).toEqual(['Trabajo principal:139150', 'Entrenador de fútbol:40000'])
+    expect(forecast([r], S, [], '2026-11-15').pendingIncome).toBe(139150 + 40000)
+  })
+
   it('sin ingresos registrados: pendientes los dos previstos de noviembre', () => {
     expect(names(pendingIncomePlans([], S, '2026-11'))).toEqual(['Trabajo principal:139150', 'Entrenador de fútbol:40000'])
   })

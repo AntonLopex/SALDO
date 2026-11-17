@@ -2,7 +2,7 @@ import { addDaysISO, addMonths, monthOf, toISODate } from '@/domain/dates'
 import type { Cents } from '@/domain/money'
 import type { Tx } from '@/domain/types'
 import { monthsBetween } from './plan'
-import { netWorth } from './summary'
+import { isReimbursement, netWorth } from './summary'
 
 export type PeriodMode = 'month' | 'quarter' | 'year' | 'custom'
 export interface Range {
@@ -40,10 +40,13 @@ export function categoryBreakdown(txs: readonly Tx[], range: Range): CategorySli
   const sums = new Map<string | null, Cents>()
   let total = 0
   for (const t of txs) {
-    if (t.deletedAt || t.kind !== 'expense' || t.occurredOn < range.from || t.occurredOn > range.to) continue
-    sums.set(t.categoryId, (sums.get(t.categoryId) ?? 0) + t.amountCents)
-    total += t.amountCents
+    if (t.deletedAt || t.occurredOn < range.from || t.occurredOn > range.to) continue
+    if (t.kind !== 'expense' && !isReimbursement(t)) continue
+    const signed = t.kind === 'expense' ? t.amountCents : -t.amountCents // el reembolso resta de su categoría
+    sums.set(t.categoryId, (sums.get(t.categoryId) ?? 0) + signed)
   }
+  for (const [k, v] of sums) if (v <= 0) sums.delete(k) // categoría totalmente reembolsada: no aparece
+  for (const v of sums.values()) total += v
   return [...sums]
     .map(([categoryId, cents]) => ({ categoryId, cents, pct: total ? (cents / total) * 100 : 0 }))
     .sort((a, b) => b.cents - a.cents)
@@ -62,7 +65,8 @@ export function monthlySeries(txs: readonly Tx[], fromYm: string, toYm: string):
     if (t.deletedAt) continue
     const p = pts.get(monthOf(t.occurredOn))
     if (!p) continue
-    if (t.kind === 'income') p.income += t.amountCents
+    if (isReimbursement(t)) p.expense -= t.amountCents
+    else if (t.kind === 'income') p.income += t.amountCents
     else if (t.kind === 'expense') p.expense += t.amountCents
   }
   for (const p of pts.values()) p.saving = p.income - p.expense
@@ -86,7 +90,8 @@ export function rangeSummary(txs: readonly Tx[], range: Range): RangeSummary {
   const s: RangeSummary = { income: 0, expense: 0, saving: 0, count: 0 }
   for (const t of txs) {
     if (t.deletedAt || t.occurredOn < range.from || t.occurredOn > range.to) continue
-    if (t.kind === 'income') { s.income += t.amountCents; s.count++ }
+    if (isReimbursement(t)) { s.expense -= t.amountCents; s.count++ }
+    else if (t.kind === 'income') { s.income += t.amountCents; s.count++ }
     else if (t.kind === 'expense') { s.expense += t.amountCents; s.count++ }
   }
   s.saving = s.income - s.expense

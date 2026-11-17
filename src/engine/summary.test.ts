@@ -25,7 +25,27 @@ describe('netWorth', () => {
 describe('monthSummary', () => {
   it('la apertura no cuenta como ingreso', () => {
     const txs = [tx('opening', 386014, '2026-11-01'), tx('income', 179000, '2026-11-28'), tx('expense', 1500, '2026-11-02'), tx('expense', 500, '2026-12-01')]
-    expect(monthSummary(txs, '2026-11')).toEqual({ income: 179000, expense: 1500, saving: 177500, count: 2 })
+    expect(monthSummary(txs, '2026-11')).toEqual({ income: 179000, expense: 1500, saving: 177500, count: 2, reimbursed: 0 })
+  })
+})
+
+describe('reembolsos (ingreso con categoría)', () => {
+  const reimb = (c: number, on: string): Tx => ({ ...tx('income', c, on), categoryId: 'viajes' })
+  it('descuentan del gasto del mes y del presupuesto; no cuentan como ingreso', () => {
+    // Viaje de 1.000 € pagado entero; la pareja devuelve 500 €; sueldo 1.391,50 €
+    const txs = [tx('income', 139150, '2026-11-01'), tx('expense', 100000, '2026-11-10'), reimb(50000, '2026-11-12')]
+    const m = monthSummary(txs, '2026-11')
+    expect(m).toEqual({ income: 139150, expense: 50000, saving: 89150, count: 3, reimbursed: 50000 })
+    expect(budgetStatus(m.expense, 79000).remaining).toBe(29000) // antes: superado en 210 €
+  })
+  it('el ahorro no cambia con el reembolso (mismo dinero), y el patrimonio tampoco', () => {
+    const base = [tx('opening', 1000, '2026-10-01'), tx('income', 139150, '2026-11-01'), tx('expense', 100000, '2026-11-10')]
+    const con = [...base, reimb(50000, '2026-11-12')]
+    expect(netWorth(con)).toBe(netWorth(base) + 50000)
+    expect(monthSummary(con, '2026-11').saving).toBe(monthSummary(base, '2026-11').saving + 50000)
+  })
+  it('un ingreso normal (sin categoría) sigue siendo ingreso', () => {
+    expect(monthSummary([tx('income', 100, '2026-11-01')], '2026-11')).toMatchObject({ income: 100, expense: 0, reimbursed: 0 })
   })
 })
 

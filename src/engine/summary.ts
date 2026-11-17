@@ -16,18 +16,27 @@ export function netWorth(txs: readonly Tx[], upTo?: string): Cents {
   return total
 }
 
+/**
+ * Reembolso: un ingreso con categoría. Es dinero que te devuelven de un gasto que pagaste tú entero
+ * (p. ej. tu pareja te paga la mitad de un viaje). No es un ingreso «de verdad»: se resta del gasto
+ * de esa categoría. El patrimonio no cambia (entra dinero igual), pero el gasto real baja.
+ */
+export const isReimbursement = (t: Pick<Tx, 'kind' | 'categoryId'>): boolean => t.kind === 'income' && !!t.categoryId
+
 export interface MonthSummary {
-  income: Cents
-  expense: Cents
-  saving: Cents // ahorro real = ingresos - gastos
+  income: Cents // ingresos reales (sin reembolsos)
+  expense: Cents // gasto NETO = gastos − reembolsos (puede ser negativo si te devuelven más de lo gastado)
+  saving: Cents // ahorro real = ingresos − gasto neto (los reembolsos no lo alteran)
   count: number // movimientos reales del mes (sin apertura)
+  reimbursed: Cents // total de reembolsos recibidos (informativo)
 }
 
 export function monthSummary(txs: readonly Tx[], ym: string): MonthSummary {
-  const s: MonthSummary = { income: 0, expense: 0, saving: 0, count: 0 }
+  const s: MonthSummary = { income: 0, expense: 0, saving: 0, count: 0, reimbursed: 0 }
   for (const t of txs) {
     if (t.deletedAt || monthOf(t.occurredOn) !== ym) continue
-    if (t.kind === 'income') { s.income += t.amountCents; s.count++ }
+    if (isReimbursement(t)) { s.reimbursed += t.amountCents; s.expense -= t.amountCents; s.count++ }
+    else if (t.kind === 'income') { s.income += t.amountCents; s.count++ }
     else if (t.kind === 'expense') { s.expense += t.amountCents; s.count++ }
   }
   s.saving = s.income - s.expense

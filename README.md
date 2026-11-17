@@ -5,7 +5,7 @@ Aplicación personal de finanzas y ahorro: registra un gasto en segundos desde e
 **Web publicada:** <https://antonlopex.github.io/SALDO/> · **Accesos directos:** `/nuevo-gasto` y `/nuevo-ingreso` (con `?importe=3,50&categoria=cafe`, ver [docs/IOS_ATAJOS.md](docs/IOS_ATAJOS.md))
 
 ## Qué hace
-- **Registro ultrarrápido** de gastos e ingresos (importe, categoría favorita, fecha de hoy), con deshacer y duplicar.
+- **Registro ultrarrápido** de gastos e ingresos (importe, categoría favorita, fecha de hoy), con deshacer y duplicar. Un ingreso con categoría es un **reembolso** (p. ej. tu pareja te devuelve su mitad de un viaje): se resta de tus gastos y del presupuesto.
 - **Inicio:** patrimonio, progreso hacia el objetivo, resumen del mes, presupuesto con avisos al 50/75/90/100 %, y **previsión** claramente diferenciada de los datos reales.
 - **Objetivos** (15.000 / 17.000 / 20.000 €), estado «por delante / en línea / por detrás» (nunca «perdido»), fondos virtuales y gastos futuros.
 - **Estadísticas** con gráficos, **movimientos** con búsqueda, filtros y calendario.
@@ -35,7 +35,7 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_...      # SOLO la clave pública. Jamás 
 | `npm run build` | Comprueba tipos y compila para producción (con PWA) |
 | `npm run preview` | Sirve la compilación en `http://localhost:4173/SALDO/` |
 | `npm run check:dist` | Verifica PWA, CSP y ausencia de secretos en `dist/` |
-| `npm test` | 267 pruebas unitarias y de integración |
+| `npm test` | 271 pruebas unitarias y de integración |
 | `npm run test:e2e` | Pruebas en navegador real: funcionales, accesibilidad, seguridad |
 | `npm run test:perf` | Presupuestos de peso y tiempo |
 | `npm run test:all` | Todo lo anterior |

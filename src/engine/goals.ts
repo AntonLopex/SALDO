@@ -52,7 +52,7 @@ export function forecast(txs: readonly Tx[], s: Settings, planned: readonly Plan
   const plannedLinked = txs
     .filter((t) => !t.deletedAt && t.kind === 'expense' && t.plannedExpenseId && monthOf(t.occurredOn) === cm)
     .reduce((a, t) => a + t.amountCents, 0)
-  const ordinarySpent = cur.expense - plannedLinked
+  const ordinarySpent = Math.max(0, cur.expense - plannedLinked) // con reembolsos el gasto neto puede ser menor
 
   const pendingIncome = Math.max(0, planIncome(s, cm) - cur.income)
   const pendingSpend = Math.max(0, s.monthlyBudgetCents - ordinarySpent)

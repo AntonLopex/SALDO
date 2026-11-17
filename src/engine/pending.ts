@@ -24,7 +24,7 @@ export function pendingIncomePlans(txs: readonly Tx[], settings: Settings, ym: s
     .map((p) => ({ id: p.id, name: p.name, plannedCents: p.amountCents, pendingCents: p.amountCents }))
     .sort((a, b) => b.plannedCents - a.plannedCents)
 
-  const received = txs.filter((t) => !t.deletedAt && t.kind === 'income' && monthOf(t.occurredOn) === ym).map((t) => t.amountCents)
+  const received = txs.filter((t) => !t.deletedAt && t.kind === 'income' && !t.categoryId && monthOf(t.occurredOn) === ym).map((t) => t.amountCents)
 
   // 1) coincidencias exactas
   for (const p of plans) {

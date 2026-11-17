@@ -76,6 +76,8 @@ const suggestions = computed(() => {
 })
 
 function pick(o: Option) {
+  // En un ingreso la categoría es opcional (marca un reembolso): volver a pulsarla la quita
+  if (kind.value === 'income' && selectedKey.value === o.key) { categoryId.value = null; subcategoryId.value = null; return }
   categoryId.value = o.categoryId
   subcategoryId.value = o.subcategoryId
   error.value = ''
@@ -93,6 +95,14 @@ function pickFromSheet(catId: string, subId: string) {
   categoryId.value = catId
   subcategoryId.value = subId
   moreOpen.value = false
+  error.value = ''
+}
+// Al cambiar de gasto a ingreso (o al revés) la categoría elegida no se arrastra: en un ingreso significaría «reembolso»
+function setKind(k: 'expense' | 'income') {
+  if (kind.value === k) return
+  kind.value = k
+  categoryId.value = null
+  subcategoryId.value = null
   error.value = ''
 }
 function setQuick(c: number) {
@@ -135,8 +145,8 @@ async function save() {
   try {
     const payload = {
       kind: kind.value, amountCents: cents.value!, occurredOn: date.value, note: note.value,
-      categoryId: kind.value === 'expense' ? categoryId.value : null,
-      subcategoryId: kind.value === 'expense' ? subcategoryId.value : null,
+      categoryId: categoryId.value,
+      subcategoryId: categoryId.value ? subcategoryId.value : null,
       plannedExpenseId: kind.value === 'expense' ? plannedId.value : null,
     }
     if (editId.value) {
@@ -263,7 +273,7 @@ const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value ==
     <div v-else-if="saved" class="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-4 px-5 text-center">
       <div class="done grid size-24 place-items-center rounded-full bg-accent text-on-accent"><Check :size="48" :stroke-width="3" aria-hidden="true" /></div>
       <p class="text-2xl font-extrabold" role="status">Guardado</p>
-      <p class="num text-lg text-muted">{{ formatCents(saved.amountCents) }} · {{ saved.kind === 'income' ? 'Ingreso' : categoryLabel(saved) }}</p>
+      <p class="num text-lg text-muted">{{ formatCents(saved.amountCents) }} · {{ saved.kind === 'income' ? (saved.categoryId ? 'Reembolso · ' + categoryLabel(saved) : 'Ingreso') : categoryLabel(saved) }}</p>
       <div class="mt-4 flex w-full max-w-sm flex-col gap-3">
         <button type="button" class="press min-h-14 rounded-2xl bg-accent text-base font-bold text-on-accent" @click="resetForm">Añadir otro</button>
         <button type="button" class="press min-h-14 rounded-2xl bg-surface-2 text-base font-semibold" @click="router.push('/')">Abrir SALDO</button>
@@ -280,7 +290,7 @@ const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value ==
             type="button" role="radio" :aria-checked="kind === k.v"
             class="press min-h-11 rounded-xl text-sm font-bold"
             :class="kind === k.v ? 'bg-surface text-ink shadow-card' : 'text-muted'"
-            @click="kind = k.v"
+            @click="setKind(k.v)"
           >{{ k.l }}</button>
         </div>
 
@@ -303,7 +313,7 @@ const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value ==
         <p v-if="error" class="rounded-xl bg-danger/10 px-4 py-3 text-sm font-semibold text-danger" role="alert">{{ error }}</p>
 
         <!-- Sugerencias -->
-        <div v-if="!editId && !amountText && suggestions.length" class="space-y-2">
+        <div v-if="kind === 'expense' && !editId && !amountText && suggestions.length" class="space-y-2">
           <p class="text-xs font-semibold tracking-wide text-muted uppercase">Repetir</p>
           <div class="flex flex-wrap gap-2">
             <Chip v-for="s in suggestions" :key="s.id" @click="applySuggestion(s)">{{ categoryLabel(s) }} · {{ formatCents(s.amountCents) }}</Chip>
@@ -311,10 +321,12 @@ const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value ==
         </div>
 
         <!-- Categorías -->
-        <div v-if="kind === 'expense'" class="space-y-3">
-          <p class="text-xs font-semibold tracking-wide text-muted uppercase">Categoría</p>
+        <div class="space-y-3">
+          <p class="text-xs font-semibold tracking-wide text-muted uppercase">{{ kind === 'expense' ? 'Categoría' : 'Reembolso de…' }} <span v-if="kind === 'income'" class="font-normal normal-case">(opcional)</span></p>
+          <p v-if="kind === 'income'" class="text-xs text-muted">Si es dinero que te devuelven de un gasto (p. ej. tu pareja te paga su mitad), elige la categoría: se resta de tus gastos y del presupuesto. Si es un ingreso normal, déjalo sin elegir.</p>
           <div class="flex flex-wrap gap-2">
             <Chip v-for="o in options" :key="o.key" :selected="selectedKey === o.key" :icon="iconFor(o.icon)" :color="o.color" @click="pick(o)">{{ o.label }}</Chip>
+            <Chip v-if="kind === 'income' && categoryId && !options.some((o) => o.key === selectedKey)" selected @click="categoryId = null; subcategoryId = null">{{ categoryLabel({ categoryId, subcategoryId }) }} ✕</Chip>
             <Chip @click="moreOpen = true">Más…</Chip>
           </div>
           <div v-if="subOptions.length" class="space-y-2">

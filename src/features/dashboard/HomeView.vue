@@ -21,7 +21,7 @@ const goal = computed(() => settings.value.goals.main)
 const worth = computed(() => fc.value.worthNow)
 const g = computed(() => goals.value.main)
 const month = computed(() => monthSummary(txs.value, ym))
-const bud = computed(() => budgetStatus(month.value.expense, settings.value.monthlyBudgetCents))
+const bud = computed(() => budgetStatus(Math.max(0, month.value.expense), settings.value.monthlyBudgetCents))
 const savingPct = computed(() => (month.value.income > 0 ? Math.round((month.value.saving / month.value.income) * 100) : null))
 const recent = computed(() =>
   txs.value.filter((t) => t.kind === 'income' || t.kind === 'expense')
@@ -102,10 +102,11 @@ const horizons = computed(() => [
       <h2 class="font-bold">{{ monthLabel(ym) }}</h2>
       <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
         <div><dt class="text-xs text-muted">Ingresos</dt><dd class="num mt-0.5 font-bold text-accent">{{ formatCents(month.income) }}</dd></div>
-        <div><dt class="text-xs text-muted">Gastos</dt><dd class="num mt-0.5 font-bold text-danger">{{ formatCents(month.expense) }}</dd></div>
+        <div><dt class="text-xs text-muted">Gastos<span v-if="month.reimbursed > 0"> (netos)</span></dt><dd class="num mt-0.5 font-bold text-danger">{{ formatCents(month.expense) }}</dd></div>
         <!-- Sin ingresos registrados, «ingresos − gastos» saldría siempre negativo y asustaría sin motivo: no se muestra -->
         <div><dt class="text-xs text-muted">Ahorro</dt><dd class="num mt-0.5 font-bold">{{ month.income > 0 ? signed(month.saving) : '—' }}</dd></div>
       </dl>
+      <p v-if="month.reimbursed > 0" class="mt-2 text-center text-xs text-muted">Incluye {{ formatCents(month.reimbursed) }} de reembolsos descontados de tus gastos.</p>
       <p v-if="savingPct !== null" class="mt-2 text-center text-xs text-muted">Ahorras el {{ savingPct }} % de tus ingresos</p>
       <p v-else class="mt-2 text-center text-xs text-muted">Sin ingresos registrados este mes: el ahorro se calcula al registrarlos.</p>
 
