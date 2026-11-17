@@ -20,6 +20,8 @@ const router = useRouter()
 const editId = computed(() => (typeof route.params.id === 'string' ? route.params.id : null))
 // /nuevo-ingreso abre directamente en «Ingreso»; el resto, en «Gasto»
 const kind = ref<'expense' | 'income'>(route.name === 'nuevo-ingreso' ? 'income' : 'expense')
+// Reembolso = ingreso con la categoría del gasto que devuelve (se resta de ese gasto; no es un ingreso como el sueldo)
+const reimb = ref(false)
 const amountText = ref('')
 const categoryId = ref<string | null>(null)
 const subcategoryId = ref<string | null>(null)
@@ -76,8 +78,6 @@ const suggestions = computed(() => {
 })
 
 function pick(o: Option) {
-  // En un ingreso la categoría es opcional (marca un reembolso): volver a pulsarla la quita
-  if (kind.value === 'income' && selectedKey.value === o.key) { categoryId.value = null; subcategoryId.value = null; return }
   categoryId.value = o.categoryId
   subcategoryId.value = o.subcategoryId
   error.value = ''
@@ -98,9 +98,12 @@ function pickFromSheet(catId: string, subId: string) {
   error.value = ''
 }
 // Al cambiar de gasto a ingreso (o al revés) la categoría elegida no se arrastra: en un ingreso significaría «reembolso»
-function setKind(k: 'expense' | 'income') {
-  if (kind.value === k) return
-  kind.value = k
+function setKind(k: 'expense' | 'income' | 'reimb') {
+  const isReimb = k === 'reimb'
+  const nk = isReimb ? 'income' : k
+  if (kind.value === nk && reimb.value === isReimb) return
+  kind.value = nk
+  reimb.value = isReimb
   categoryId.value = null
   subcategoryId.value = null
   error.value = ''
@@ -134,7 +137,7 @@ function resetForm() {
 
 function validate(): string {
   if (cents.value === null || cents.value <= 0) return 'Introduce un importe válido'
-  if (kind.value === 'expense' && !categoryId.value) return 'Elige una categoría'
+  if ((kind.value === 'expense' || reimb.value) && !categoryId.value) return reimb.value ? 'Elige de qué gasto es el reembolso' : 'Elige una categoría'
   return ''
 }
 
@@ -145,8 +148,8 @@ async function save() {
   try {
     const payload = {
       kind: kind.value, amountCents: cents.value!, occurredOn: date.value, note: note.value,
-      categoryId: categoryId.value,
-      subcategoryId: categoryId.value ? subcategoryId.value : null,
+      categoryId: kind.value === 'expense' || reimb.value ? categoryId.value : null,
+      subcategoryId: (kind.value === 'expense' || reimb.value) && categoryId.value ? subcategoryId.value : null,
       plannedExpenseId: kind.value === 'expense' ? plannedId.value : null,
     }
     if (editId.value) {
@@ -192,6 +195,7 @@ function leave() {
 
 function load(t: Tx, asCopy: boolean) {
   kind.value = t.kind === 'income' ? 'income' : 'expense'
+  reimb.value = t.kind === 'income' && !!t.categoryId
   amountText.value = String(t.amountCents / 100).replace('.', ',')
   categoryId.value = t.categoryId
   subcategoryId.value = t.subcategoryId
@@ -251,7 +255,7 @@ watch(
   { immediate: true },
 )
 
-const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value === 'expense' ? 'Nuevo gasto' : 'Nuevo ingreso'))
+const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value === 'expense' ? 'Nuevo gasto' : reimb.value ? 'Nuevo reembolso' : 'Nuevo ingreso'))
 </script>
 
 <template>
@@ -284,12 +288,12 @@ const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value ==
     <!-- Formulario -->
     <form v-else class="mx-auto flex w-full max-w-xl flex-1 flex-col" novalidate @submit.prevent="save">
       <div class="flex-1 space-y-5 px-5 pt-2 pb-6">
-        <div class="grid grid-cols-2 gap-1 rounded-2xl bg-surface-2 p-1" role="radiogroup" aria-label="Tipo de movimiento">
+        <div class="grid grid-cols-3 gap-1 rounded-2xl bg-surface-2 p-1" role="radiogroup" aria-label="Tipo de movimiento">
           <button
-            v-for="k in [{ v: 'expense', l: 'Gasto' }, { v: 'income', l: 'Ingreso' }] as const" :key="k.v"
-            type="button" role="radio" :aria-checked="kind === k.v"
+            v-for="k in [{ v: 'expense', l: 'Gasto' }, { v: 'income', l: 'Ingreso' }, { v: 'reimb', l: 'Reembolso' }] as const" :key="k.v"
+            type="button" role="radio" :aria-checked="(k.v === 'reimb' ? reimb : k.v === 'income' ? kind === 'income' && !reimb : kind === 'expense')"
             class="press min-h-11 rounded-xl text-sm font-bold"
-            :class="kind === k.v ? 'bg-surface text-ink shadow-card' : 'text-muted'"
+            :class="(k.v === 'reimb' ? reimb : k.v === 'income' ? kind === 'income' && !reimb : kind === 'expense') ? 'bg-surface text-ink shadow-card' : 'text-muted'"
             @click="setKind(k.v)"
           >{{ k.l }}</button>
         </div>
@@ -321,12 +325,11 @@ const title = computed(() => (editId.value ? 'Editar movimiento' : kind.value ==
         </div>
 
         <!-- Categorías -->
-        <div class="space-y-3">
-          <p class="text-xs font-semibold tracking-wide text-muted uppercase">{{ kind === 'expense' ? 'Categoría' : 'Reembolso de…' }} <span v-if="kind === 'income'" class="font-normal normal-case">(opcional)</span></p>
-          <p v-if="kind === 'income'" class="text-xs text-muted">Si es dinero que te devuelven de un gasto (p. ej. tu pareja te paga su mitad), elige la categoría: se resta de tus gastos y del presupuesto. Si es un ingreso normal, déjalo sin elegir.</p>
+        <div v-if="kind === 'expense' || reimb" class="space-y-3">
+          <p class="text-xs font-semibold tracking-wide text-muted uppercase">{{ reimb ? '¿De qué gasto es el reembolso?' : 'Categoría' }}</p>
+          <p v-if="reimb" class="text-xs text-muted">Dinero que te devuelven de algo que pagaste tú (p. ej. tu pareja te paga su mitad del viaje). Se resta de ese gasto y del presupuesto del mes, y no cuenta como un ingreso más: tus ingresos previstos, como el sueldo, no se tocan.</p>
           <div class="flex flex-wrap gap-2">
             <Chip v-for="o in options" :key="o.key" :selected="selectedKey === o.key" :icon="iconFor(o.icon)" :color="o.color" @click="pick(o)">{{ o.label }}</Chip>
-            <Chip v-if="kind === 'income' && categoryId && !options.some((o) => o.key === selectedKey)" selected @click="categoryId = null; subcategoryId = null">{{ categoryLabel({ categoryId, subcategoryId }) }} ✕</Chip>
             <Chip @click="moreOpen = true">Más…</Chip>
           </div>
           <div v-if="subOptions.length" class="space-y-2">

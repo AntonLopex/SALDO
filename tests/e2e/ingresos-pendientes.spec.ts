@@ -149,6 +149,7 @@ test.describe('reembolsos: un ingreso con categoría descuenta del gasto y del p
     // El reembolso: ingreso de 500 € con la categoría del gasto
     await page.goto('nuevo-ingreso')
     await dataReady(page)
+    await page.getByRole('radio', { name: 'Reembolso' }).click()
     await page.getByLabel('Importe en euros').fill('500')
     await page.getByRole('button', { name: 'Café' }).click()
     await page.getByRole('button', { name: 'Guardar', exact: true }).click()
@@ -159,6 +160,26 @@ test.describe('reembolsos: un ingreso con categoría descuenta del gasto y del p
     await expect(page.getByText(/Quedan 290,00\s€/)).toBeVisible()
     await expect(page.getByText(/Superado en/)).toHaveCount(0)
     await expect(page.getByText(/Incluye 500,00\s€ de reembolsos/)).toBeVisible()
+    // El sueldo previsto sigue pendiente, intacto
+    await expect(pendingCard(page).getByText(/1\.391,50\s€/)).toBeVisible()
+  })
+
+  test('un reembolso exige elegir de qué gasto es', async ({ page }) => {
+    await page.goto('nuevo-ingreso')
+    await dataReady(page)
+    await page.getByRole('radio', { name: 'Reembolso' }).click()
+    await page.getByLabel('Importe en euros').fill('50')
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+    await expect(page.getByText('Elige de qué gasto es el reembolso')).toBeVisible()
+  })
+
+  test('un ingreso normal NO es reembolso: cubre el sueldo previsto', async ({ page }) => {
+    await page.goto('nuevo-ingreso?importe=1391,50')
+    await dataReady(page)
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+    await page.getByRole('button', { name: 'Abrir SALDO' }).click()
+    await dataReady(page)
+    await expect(pendingCard(page).getByText('Trabajo principal')).toHaveCount(0)
   })
 
   test('cambiar de gasto a ingreso no arrastra la categoría (no se crea un reembolso sin querer)', async ({ page }) => {
